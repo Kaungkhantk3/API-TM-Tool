@@ -26,13 +26,15 @@
   </section>
   <script>
     let token = localStorage.getItem('apiSentinelToken');
+    const nameInput = document.getElementById('name');
+    const urlInput = document.getElementById('url');
     const headers = () => ({'Content-Type':'application/json','Authorization':'Bearer '+token});
     async function signIn(){ const res=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:username.value,password:password.value})}); if(!res.ok){loginError.textContent='Incorrect username or password';return} token=(await res.json()).access_token;localStorage.setItem('apiSentinelToken',token);showApp() }
     function signOut(){localStorage.removeItem('apiSentinelToken');location.reload()}
     async function showApp(){ login.classList.add('hidden');app.classList.remove('hidden'); await load() }
     async function load(){ const res=await fetch('/dashboard-data',{headers:headers()}); if(res.status===401){signOut();return} const data=await res.json(),s=data.summary; total.textContent=s.total_endpoints;healthy.textContent=s.healthy_endpoints;alerting.textContent=s.alerting_endpoints;unchecked.textContent=s.unchecked_endpoints; rows.innerHTML=data.endpoints.map(e=>`<tr><td><b>${esc(e.name)}</b><br><span class="small">${esc(e.url)}</span></td><td class="${e.is_alert?'bad':'ok'}">${e.status_code??'Unchecked'}</td><td>${e.response_time_ms??'–'}${e.response_time_ms?' ms':''}</td><td><button onclick="check(${e.id})">Check now</button></td></tr>`).join('')||'<tr><td colspan="4" class="small">No endpoints yet.</td></tr>' }
     async function errorMessage(res){ const body=await res.json().catch(()=>({})), detail=body.detail; if(Array.isArray(detail)) return detail.map(item=>item.msg||JSON.stringify(item)).join(' '); return typeof detail==='object' ? JSON.stringify(detail) : (detail||'Could not complete the request') }
-    async function addEndpoint(){ addError.textContent=''; const res=await fetch('/endpoints',{method:'POST',headers:headers(),body:JSON.stringify({name:name.value,url:url.value,interval_seconds:300,timeout_seconds:15,response_time_threshold_ms:5000})});if(!res.ok){addError.textContent=await errorMessage(res);return} name.value=url.value='';load() }
+    async function addEndpoint(){ addError.textContent=''; const res=await fetch('/endpoints',{method:'POST',headers:headers(),body:JSON.stringify({name:nameInput.value,url:urlInput.value,interval_seconds:300,timeout_seconds:15,response_time_threshold_ms:5000})});if(!res.ok){addError.textContent=await errorMessage(res);return} nameInput.value=urlInput.value='';load() }
     async function check(id){ await fetch(`/endpoints/${id}/check`,{method:'POST',headers:headers()});load() }
     function esc(v){return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))} if(token)showApp();
   </script>
