@@ -68,3 +68,11 @@ def test_rejects_private_target():
     response = client.post("/endpoints", json={"name": "Local", "url": "http://127.0.0.1:8000"}, headers=auth_headers())
     assert response.status_code == 422
     assert "Private" in response.json()["detail"]
+
+
+def test_dashboard_uses_explicit_name_and_url_inputs():
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.text
+    assert "nameInput.value" in html
+    assert "urlInput.value" in html
