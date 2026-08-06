@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>API Sentinel</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b1020; --panel:#151d34; --line:#293556; --text:#eef2ff; --muted:#9ca9c9; --blue:#68a4ff; --green:#43d19e; --red:#ff6f82; }
+    * { box-sizing:border-box } body { margin:0; font:15px system-ui,sans-serif; background:var(--bg); color:var(--text) }
+    main { max-width:1050px; margin:auto; padding:48px 22px } h1 { margin:0; font-size:30px } .sub { color:var(--muted); margin:7px 0 30px }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px; margin-bottom:20px } .hidden { display:none }
+    input { width:100%; border:1px solid var(--line); background:#0d1428; border-radius:8px; padding:11px; color:var(--text); margin:6px 0 13px }
+    button { border:0; border-radius:8px; padding:11px 14px; color:white; background:#3d73d9; cursor:pointer; font-weight:600 } button.secondary { background:#273454; float:right }
+    .error { color:#ff9baa; min-height:20px } .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px } .metric { padding:17px; border-radius:12px; background:var(--panel); border:1px solid var(--line) } .metric b { display:block; font-size:26px; margin-top:6px }
+    .table { width:100%; border-collapse:collapse } td,th { padding:13px 8px; border-bottom:1px solid var(--line); text-align:left } th { color:var(--muted); font-size:12px; text-transform:uppercase }.ok { color:var(--green) }.bad { color:var(--red) }.small { color:var(--muted); font-size:13px }
+    @media(max-width:700px) { .grid { grid-template-columns:repeat(2,1fr) } .table { font-size:12px } }
+  </style>
+</head>
+<body><main>
+  <section id="login" class="panel" style="max-width:420px;margin:10vh auto"><h1>API Sentinel</h1><p class="sub">Sign in to manage your monitors.</p>
+    <label>Username</label><input id="username" autocomplete="username"><label>Password</label><input id="password" type="password" autocomplete="current-password">
+    <button onclick="signIn()">Sign in</button><p id="loginError" class="error"></p></section>
+  <section id="app" class="hidden"><button class="secondary" onclick="signOut()">Sign out</button><h1>API Sentinel</h1><p class="sub">Your endpoint health at a glance.</p>
+    <div class="grid"><div class="metric">Monitors<b id="total">–</b></div><div class="metric">Healthy<b class="ok" id="healthy">–</b></div><div class="metric">Alerting<b class="bad" id="alerting">–</b></div><div class="metric">Unchecked<b id="unchecked">–</b></div></div>
+    <section class="panel"><h2>Add monitor</h2><input id="name" placeholder="Name, e.g. Main API"><input id="url" placeholder="https://api.example.com/health"><button onclick="addEndpoint()">Add endpoint</button><span id="addError" class="error"></span></section>
+    <section class="panel"><h2>Monitors</h2><table class="table"><thead><tr><th>Name</th><th>Latest status</th><th>Response</th><th>Action</th></tr></thead><tbody id="rows"></tbody></table></section>
+  </section>
+  <script>
+    let token = localStorage.getItem('apiSentinelToken');
+    const headers = () => ({'Content-Type':'application/json','Authorization':'Bearer '+token});
+    async function signIn(){ const res=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:username.value,password:password.value})}); if(!res.ok){loginError.textContent='Incorrect username or password';return} token=(await res.json()).access_token;localStorage.setItem('apiSentinelToken',token);showApp() }
+    function signOut(){localStorage.removeItem('apiSentinelToken');location.reload()}
+    async function showApp(){ login.classList.add('hidden');app.classList.remove('hidden'); await load() }
+    async function load(){ const res=await fetch('/dashboard-data',{headers:headers()}); if(res.status===401){signOut();return} const data=await res.json(),s=data.summary; total.textContent=s.total_endpoints;healthy.textContent=s.healthy_endpoints;alerting.textContent=s.alerting_endpoints;unchecked.textContent=s.unchecked_endpoints; rows.innerHTML=data.endpoints.map(e=>`<tr><td><b>${esc(e.name)}</b><br><span class="small">${esc(e.url)}</span></td><td class="${e.is_alert?'bad':'ok'}">${e.status_code??'Unchecked'}</td><td>${e.response_time_ms??'–'}${e.response_time_ms?' ms':''}</td><td><button onclick="check(${e.id})">Check now</button></td></tr>`).join('')||'<tr><td colspan="4" class="small">No endpoints yet.</td></tr>' }
+    async function addEndpoint(){ addError.textContent=''; const res=await fetch('/endpoints',{method:'POST',headers:headers(),body:JSON.stringify({name:name.value,url:url.value,interval_seconds:300,timeout_seconds:15,response_time_threshold_ms:5000})});if(!res.ok){addError.textContent=(await res.json()).detail||'Could not add endpoint';return} name.value=url.value='';load() }
+    async function check(id){ await fetch(`/endpoints/${id}/check`,{method:'POST',headers:headers()});load() }
+    function esc(v){return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))} if(token)showApp();
+  </script>
+</main></body></html>

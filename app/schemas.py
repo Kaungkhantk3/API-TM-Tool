@@ -38,3 +38,27 @@ class HealthSummary(BaseModel):
     healthy_endpoints: int
     alerting_endpoints: int
     unchecked_endpoints: int
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1)
+    password: str = Field(min_length=1)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class DashboardEndpoint(BaseModel):
+    id: int
+    name: str
+    url: str
+    status_code: int | None
+    response_time_ms: int | None
+    is_alert: bool
+
+
+class DashboardData(BaseModel):
+    summary: HealthSummary
+    endpoints: list[DashboardEndpoint]

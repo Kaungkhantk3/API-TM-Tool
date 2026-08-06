@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import CheckLog, Endpoint
+from app.url_safety import validate_public_url
 
 
 def _is_failure(check: CheckLog) -> bool:
@@ -26,11 +27,12 @@ def check_endpoint(endpoint: Endpoint, db: Session, client: httpx.Client | None 
     started = perf_counter()
     status_code = None
     error_message = None
-    request_client = client or httpx.Client(follow_redirects=True)
+    request_client = client or httpx.Client(follow_redirects=False, trust_env=False)
     try:
+        validate_public_url(endpoint.url)
         response = request_client.get(endpoint.url, timeout=endpoint.timeout_seconds)
         status_code = response.status_code
-    except httpx.HTTPError as exc:
+    except (httpx.HTTPError, ValueError) as exc:
         error_message = str(exc)
     finally:
         if client is None:
