@@ -1,6 +1,10 @@
 # API Sentinel
 
 API Sentinel is a lightweight endpoint monitoring service built with FastAPI. It periodically checks configured REST endpoints, stores check history, and exposes a dashboard/API for monitoring service health.
+<img width="1434" height="682" alt="image" src="https://github.com/user-attachments/assets/b5450657-3a7e-4217-b438-ba0ad7c09b89" />
+<img width="1433" height="679" alt="image" src="https://github.com/user-attachments/assets/199d19bf-9549-4b61-b07e-e9a4bd3d2bc9" />
+
+
 
 ## Features
 
